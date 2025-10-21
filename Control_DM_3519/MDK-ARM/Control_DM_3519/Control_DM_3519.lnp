@@ -1,4 +1,4 @@
---cpu=Cortex-M4.fp
+--cpu=Cortex-M4.fp.sp
 "control_dm_3519\startup_stm32f427xx.o"
 "control_dm_3519\main.o"
 "control_dm_3519\gpio.o"

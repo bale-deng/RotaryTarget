@@ -93,12 +93,12 @@ int main(void)
   MX_CAN2_Init();
   MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
-	float vel=6.283;
-	can_filter_init();
-	HAL_GPIO_WritePin(GPIOH, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
-	enable_motor_mode(&hcan1,0x01,SPEED_MODE);
-	HAL_Delay(200);
-	spd_control(vel);
+  float vel=6.283;
+  can_filter_init();
+  HAL_GPIO_WritePin(GPIOH, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+  enable_motor_mode(&hcan1,0x01,SPEED_MODE);
+  HAL_Delay(200);
+  spd_control(vel);
   /* USER CODE END 2 */
 
   /* Infinite loop */

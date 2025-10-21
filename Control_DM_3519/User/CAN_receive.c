@@ -115,9 +115,9 @@ void enable_motor_mode(CAN_HandleTypeDef* hcan, uint16_t motor_id, uint16_t mode
 	uint16_t id = motor_id + mode_id;
 	uint32_t send_mail_box;
 	CAN_TxHeaderTypeDef Enable_tx_message;
-  Enable_tx_message.StdId = id;
-  Enable_tx_message.IDE = CAN_ID_STD;
-  Enable_tx_message.RTR = CAN_RTR_DATA;
+	Enable_tx_message.StdId = id;
+	Enable_tx_message.IDE = CAN_ID_STD;
+	Enable_tx_message.RTR = CAN_RTR_DATA;
 	Enable_tx_message.DLC = 0x08;
 	data[0] = 0xFF;
 	data[1] = 0xFF;
