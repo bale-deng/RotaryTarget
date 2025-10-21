@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "dm_motor_drv.h": "c",
+        "dm_motor_ctrl.h": "c"
+    }
+}
