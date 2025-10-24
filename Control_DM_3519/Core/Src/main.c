@@ -48,7 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-  float vel=3.14;
+  float vel=5;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/

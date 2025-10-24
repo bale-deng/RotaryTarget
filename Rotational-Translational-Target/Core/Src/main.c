@@ -20,11 +20,13 @@
 #include "main.h"
 #include "can.h"
 #include "iwdg.h"
+#include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "bsp_can.h"
+#include "CAN_receive.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,8 +41,6 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
-
 
 /* USER CODE END PM */
 
@@ -58,31 +58,13 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* 给A板的24V输出使能 */
-uint8_t MotorPowerEnable(void)
-{
-    uint8_t PinState = HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_2) & HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_3) & HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_4) & HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_5);
 
-    if (HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_2) == GPIO_PIN_RESET)
-    {
-        // 使能24V
-        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_2, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_3, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_4, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_5, GPIO_PIN_SET);
-        return 1;
-    }
-    else
-    {
-        return 1;
-    }
-}
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -103,15 +85,17 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-	
-	// 独立看门狗使用实例：
-// HAL_IWDG_Init(IWDG_HandleTypeDef *hiwdg); -> 第一步调用初始化
-// HAL_IWDG_Refresh(IWDG_HandleTypeDef *hiwdg); -> 要喂狗的时候调用喂狗函数
 
-// 窗口看门狗调用实例：
-// HAL_WWDG_Init(WWDG_HandleTypeDef *hwwdg); -> 第一步调用初始化
-// HAL_WWDG_Refresh(WWDG_HandleTypeDef *hwwdg) -> 第二步喂狗
-// HAL_WWDG_IRQHandler(WWDG_HandleTypeDef *hwwdg); -> 第三步注意这个回调函数
+  // 独立看门狗使用实例：
+  // HAL_IWDG_Init(IWDG_HandleTypeDef *hiwdg); -> 第一步调用初始化
+  // HAL_IWDG_Refresh(IWDG_HandleTypeDef *hiwdg); -> 要喂狗的时候调用喂狗函数
+
+  // 窗口看门狗调用实例：
+  // HAL_WWDG_Init(WWDG_HandleTypeDef *hwwdg); -> 第一步调用初始化
+  // HAL_WWDG_Refresh(WWDG_HandleTypeDef *hwwdg) -> 第二步喂狗
+  // HAL_WWDG_IRQHandler(WWDG_HandleTypeDef *hwwdg); -> 第三步注意这个回调函数
+
+  // 现在使用IWDG
 
   /* USER CODE END SysInit */
 
@@ -119,15 +103,36 @@ int main(void)
   MX_GPIO_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
-  MX_IWDG_Init();
+//  MX_IWDG_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   MotorPowerEnable();
+
+  HAL_TIM_Base_MspInit(&htim3);
+  can_filter_init();
+  HAL_CAN_MspInit(&hcan1);
+	HAL_CAN_MspInit(&hcan2);
+  HAL_Delay(1000);
+  enable_motor_mode(&hcan1, 0x01, SPEED_MODE);
+  HAL_Delay(100);
+	MX_IWDG_Init();
+	// 测试看门狗时间长度
+	// HAL_Delay(900);
+	// HAL_IWDG_Refresh(&hiwdg);
+
+  HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    if (CAN_RX_FLAG)
+    {
+      HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_11);
+			CAN_RX_FLAG = 0x00;
+      HAL_Delay(250);
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -136,23 +141,23 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+   * in the RCC_OscInitTypeDef structure.
+   */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -167,16 +172,15 @@ void SystemClock_Config(void)
   }
 
   /** Activate the Over-Drive mode
-  */
+   */
   if (HAL_PWREx_EnableOverDrive() != HAL_OK)
   {
     Error_Handler();
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
@@ -193,9 +197,9 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -208,12 +212,12 @@ void Error_Handler(void)
 }
 #ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

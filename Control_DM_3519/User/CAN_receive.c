@@ -34,7 +34,7 @@ extern CAN_HandleTypeDef hcan2;
     }
 
 #define ABS(x)		((x>0)? (x): (-x)) 
-#define MAX_CIRCLE 20
+#define MAX_CIRCLE 12
 /*
 motor data,  0:chassis motor1 3508;1:chassis motor3 3508;2:chassis motor3 3508;3:chassis motor4 3508;
 4:yaw gimbal motor 6020;5:pitch gimbal motor 6020;6:trigger motor 2006;

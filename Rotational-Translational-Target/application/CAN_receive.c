@@ -32,11 +32,11 @@ extern CAN_HandleTypeDef hcan2;
     (ptr)->given_current = (uint16_t)((data)[4] << 8 | (data)[5]); \
     (ptr)->temperate = (data)[6];                                  \
   }
-#define MAX_ANGLE 8192
-#define MIN_ANGLE 0
-#define HALF_MAX_ANGLE 4096
-#define POSITION_MODE 0
-#define SPEED_MODE 1
+
+#define ABS(x) ((x > 0) ? (x) : (-x))
+#define MAX_CIRCLE 12
+
+static float circle = 0;
 
 /*
 motor data,  0:chassis motor1 3508;1:chassis motor3 3508;2:chassis motor3 3508;3:chassis motor4 3508;
@@ -50,16 +50,12 @@ static CAN_TxHeaderTypeDef gimbal_tx_message;
 static uint8_t gimbal_can_send_data[8];
 static CAN_TxHeaderTypeDef chassis_tx_message;
 static uint8_t chassis_can_send_data[8];
-int set_spd[4] = {2000};
-int angle = 120;
-int test_mode = SPEED_MODE; // 0为位置环，1为速度环
-
-uint8_t rx_data[8];
-int get_current; // 控制转动方向
-int count;       // 用于判断哪个方向是就近
-float vofa;      // 用于vofa发送
-
+float vel_forword = 6.283, vel_reverse = -6.283;
+int test_mode = control_position;
+motor_t motor[1];
+extern float target_value;
 uint8_t tail[4] = {0x00, 0x00, 0x80, 0x7f};
+
 /**
  * @brief          hal CAN fifo call back, receive motor data
  * @param[in]      hcan, the point to CAN handle
@@ -82,108 +78,250 @@ void only_pid_struct()
   }
 }
 
-int postion_control()
+// int postion_control()
+// {
+//   int current;
+
+//   if (angle < MIN_ANGLE)
+//   {
+//     angle = MIN_ANGLE;
+//   }
+//   else if (angle > MAX_ANGLE)
+//   {
+//     angle = MAX_ANGLE;
+//   }
+
+//   count = angle - motor_chassis[0].ecd;
+
+//   if (count > 0) // 目标角度大于当前角度
+//   {
+//     if (count <= HALF_MAX_ANGLE) // 正转更近
+//     {
+//       current = 1;
+//     }
+//     else // 反转更近
+//     {
+//       current = -1;
+//     }
+//   }
+//   else if (count < 0)
+//   {
+//     if (count <= -HALF_MAX_ANGLE) // 正转更近
+//     {
+//       current = 1;
+//     }
+//     else // 反转更近
+//     {
+//       current = -1;
+//     }
+//   }
+//   return current;
+// }
+
+// void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+// {
+//   CAN_RxHeaderTypeDef rx_header;
+//   HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
+
+//   switch (rx_header.StdId)
+//   {
+//   case CAN_3508_M1_ID:
+//   case CAN_3508_M2_ID:
+//   case CAN_3508_M3_ID:
+//   case CAN_3508_M4_ID:
+//   case CAN_YAW_MOTOR_ID:
+//   case CAN_PIT_MOTOR_ID:
+//   case CAN_TRIGGER_MOTOR_ID:
+//   {
+//     volatile uint8_t i = 0;
+//     // get motor id
+//     i = rx_header.StdId - CAN_3508_M1_ID;
+//     get_motor_measure(&motor_chassis[i], rx_data);
+
+//     if (test_mode == POSITION_MODE)
+//     {
+//       get_current = postion_control();
+//       pid_calc(&pid_pos, (float)(motor_chassis[i].ecd), (float)angle);
+//       pid_calc(&pid_spd[i], motor_chassis[i].speed_rpm, pid_pos.pos_out);
+
+//       if (get_current == 1)
+//       {
+//         CAN_cmd_chassis(pid_spd[0].delta_out,
+//                         pid_spd[1].delta_out,
+//                         pid_spd[2].delta_out,
+//                         pid_spd[3].delta_out);
+//       }
+//       else
+//       {
+//         CAN_cmd_chassis(-pid_spd[0].delta_out,
+//                         -pid_spd[1].delta_out,
+//                         -pid_spd[2].delta_out,
+//                         -pid_spd[3].delta_out);
+//       }
+//     }
+//     else if (test_mode == SPEED_MODE)
+//     {
+//       for (int i = 0; i < 4; i++)
+//       {
+//         pid_calc(&pid_spd[i], motor_chassis[i].speed_rpm, set_spd[i]);
+//       }
+//       CAN_cmd_chassis(pid_spd[0].delta_out,
+//                       pid_spd[1].delta_out,
+//                       pid_spd[2].delta_out,
+//                       pid_spd[3].delta_out);
+//     }
+//     vofa = (float)(motor_chassis[0].speed_rpm);
+//     //			VOFA_Send(&vofa);
+//     break;
+//   }
+
+//   default:
+//   {
+//     break;
+//   }
+//   }
+// }
+
+float count_circle(motor_t *motor)
 {
-  int current;
-
-  if (angle < MIN_ANGLE)
+  if (motor->para.vel > 0)
   {
-    angle = MIN_ANGLE;
+    if (motor->para.pos < motor->para.pos_last)
+      circle++;
   }
-  else if (angle > MAX_ANGLE)
+  else
   {
-    angle = MAX_ANGLE;
+    if (motor->para.pos > motor->para.pos_last)
+      circle--;
   }
-
-  count = angle - motor_chassis[0].ecd;
-
-  if (count > 0) // 目标角度大于当前角度
-  {
-    if (count <= HALF_MAX_ANGLE) // 正转更近
-    {
-      current = 1;
-    }
-    else // 反转更近
-    {
-      current = -1;
-    }
-  }
-  else if (count < 0)
-  {
-    if (count <= -HALF_MAX_ANGLE) // 正转更近
-    {
-      current = 1;
-    }
-    else // 反转更近
-    {
-      current = -1;
-    }
-  }
-  return current;
+  return circle;
 }
 
+/// @brief 转换整形为浮点
+/// @param x_int
+/// @param x_min
+/// @param x_max
+/// @param bits
+float uint_to_float(int x_int, float x_min, float x_max, int bits)
+{
+  /* converts unsigned int to float, given range and number of bits */
+  float span = x_max - x_min;
+  float offset = x_min;
+  return ((float)x_int) * span / ((float)((1 << bits) - 1)) + offset;
+}
+
+void dm4310_fbdata(motor_t *motor, uint8_t *rx_data)
+{
+  motor->para.pos_last = motor->para.pos;
+  motor->para.id = (rx_data[0]) & 0x0F;
+  motor->para.state = (rx_data[0]) >> 4;
+  motor->para.p_int = (rx_data[1] << 8) | rx_data[2];
+  motor->para.v_int = (rx_data[3] << 4) | (rx_data[4] >> 4);
+  motor->para.t_int = ((rx_data[4] & 0xF) << 8) | rx_data[5];
+  motor->para.pos = uint_to_float(motor->para.p_int, P_MIN, P_MAX, 16); // (-12.5,12.5)
+  motor->para.vel = uint_to_float(motor->para.v_int, V_MIN, V_MAX, 12); // (-45.0,45.0)
+  motor->para.tor = uint_to_float(motor->para.t_int, T_MIN, T_MAX, 12); // (-18.0,18.0)
+  motor->para.Tmos = (float)(rx_data[6]);
+  motor->para.Tcoil = (float)(rx_data[7]);
+}
+
+/// @brief 设置速度
+/// @param vel 速度
+void spd_control(float vel)
+{
+  uint8_t data[4];
+  uint8_t *vbuf;
+  uint32_t send_mail_box;
+  CAN_TxHeaderTypeDef spd_tx_message;
+  spd_tx_message.StdId = 0x201;
+  spd_tx_message.IDE = CAN_ID_STD;
+  spd_tx_message.RTR = CAN_RTR_DATA;
+  spd_tx_message.DLC = 0x04;
+  vbuf = (uint8_t *)&vel;
+  data[0] = *vbuf;
+  data[1] = *(vbuf + 1);
+  data[2] = *(vbuf + 2);
+  data[3] = *(vbuf + 3);
+
+  HAL_CAN_AddTxMessage(&hcan1, &spd_tx_message, data, &send_mail_box);
+}
+
+/// @brief 使能DM电机
+/// @param hcan       CAN句柄
+/// @param motor_id   电机ID
+/// @param mode_id    使能/失能
+void enable_motor_mode(CAN_HandleTypeDef *hcan, uint16_t motor_id, uint16_t mode_id)
+{
+  uint8_t data[8];
+  uint16_t id = motor_id + mode_id;
+  uint32_t send_mail_box;
+  CAN_TxHeaderTypeDef Enable_tx_message;
+  Enable_tx_message.StdId = id;
+  Enable_tx_message.IDE = CAN_ID_STD;
+  Enable_tx_message.RTR = CAN_RTR_DATA;
+  Enable_tx_message.DLC = 0x08;
+  data[0] = 0xFF;
+  data[1] = 0xFF;
+  data[2] = 0xFF;
+  data[3] = 0xFF;
+  data[4] = 0xFF;
+  data[5] = 0xFF;
+  data[6] = 0xFF;
+  data[7] = 0xFC;
+  HAL_CAN_AddTxMessage(hcan, &Enable_tx_message, data, &send_mail_box);
+	HAL_Delay(20);
+}
+
+/// @brief 失能DM电机
+/// @param hcan       CAN句柄
+/// @param motor_id   电机ID
+/// @param mode_id    使能/失能
+void disable_motor_mode(CAN_HandleTypeDef *hcan, uint16_t motor_id, uint16_t mode_id)
+{
+  uint8_t data[8];
+  uint16_t id = motor_id + mode_id;
+  uint32_t send_mail_box;
+  CAN_TxHeaderTypeDef disable_tx_message;
+  disable_tx_message.StdId = id;
+  disable_tx_message.IDE = CAN_ID_STD;
+  disable_tx_message.RTR = CAN_RTR_DATA;
+  disable_tx_message.DLC = 0x08;
+  data[0] = 0xFF;
+  data[1] = 0xFF;
+  data[2] = 0xFF;
+  data[3] = 0xFF;
+  data[4] = 0xFF;
+  data[5] = 0xFF;
+  data[6] = 0xFF;
+  data[7] = 0xFD;
+  HAL_CAN_AddTxMessage(hcan, &disable_tx_message, data, &send_mail_box);
+}
+
+uint8_t CAN_RX_FLAG = 0;
+/// @brief 控制3519的中断回调函数
+/// @param hcan
+/// @retval 无
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
+  // __HAL_CAN_DISABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+  CAN_RX_FLAG = 1;
   CAN_RxHeaderTypeDef rx_header;
+  uint8_t rx_data[8];
   HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
+  dm4310_fbdata(&motor[0], rx_data);
 
-  switch (rx_header.StdId)
+  count_circle(&motor[0]);
+  if (circle > MAX_CIRCLE)
   {
-  case CAN_3508_M1_ID:
-  case CAN_3508_M2_ID:
-  case CAN_3508_M3_ID:
-  case CAN_3508_M4_ID:
-  case CAN_YAW_MOTOR_ID:
-  case CAN_PIT_MOTOR_ID:
-  case CAN_TRIGGER_MOTOR_ID:
+    target_value = -target_value;
+    circle = 0;
+  }
+  if (circle < (-MAX_CIRCLE))
   {
-    volatile uint8_t i = 0;
-    // get motor id
-    i = rx_header.StdId - CAN_3508_M1_ID;
-    get_motor_measure(&motor_chassis[i], rx_data);
-
-    if (test_mode == POSITION_MODE)
-    {
-      get_current = postion_control();
-      pid_calc(&pid_pos, (float)(motor_chassis[i].ecd), (float)angle);
-      pid_calc(&pid_spd[i], motor_chassis[i].speed_rpm, pid_pos.pos_out);
-
-      if (get_current == 1)
-      {
-        CAN_cmd_chassis(pid_spd[0].delta_out,
-                        pid_spd[1].delta_out,
-                        pid_spd[2].delta_out,
-                        pid_spd[3].delta_out);
-      }
-      else
-      {
-        CAN_cmd_chassis(-pid_spd[0].delta_out,
-                        -pid_spd[1].delta_out,
-                        -pid_spd[2].delta_out,
-                        -pid_spd[3].delta_out);
-      }
-    }
-    else if (test_mode == SPEED_MODE)
-    {
-      for (int i = 0; i < 4; i++)
-      {
-        pid_calc(&pid_spd[i], motor_chassis[i].speed_rpm, set_spd[i]);
-      }
-      CAN_cmd_chassis(pid_spd[0].delta_out,
-                      pid_spd[1].delta_out,
-                      pid_spd[2].delta_out,
-                      pid_spd[3].delta_out);
-    }
-    vofa = (float)(motor_chassis[0].speed_rpm);
-    //			VOFA_Send(&vofa);
-    break;
+    target_value = -target_value;
+    circle = 0;
   }
-
-  default:
-  {
-    break;
-  }
-  }
+  // __HAL_CAN_ENABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 }
 
 /**

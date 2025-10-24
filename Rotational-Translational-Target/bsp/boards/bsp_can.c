@@ -29,3 +29,25 @@ void can_filter_init(void)
     HAL_CAN_Start(&hcan2);
     HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING);
 }
+
+/* 给A板的24V输出使能 */
+uint8_t MotorPowerEnable(void)
+{
+    uint8_t PinState = HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_2) & HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_3) & HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_4) & HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_5);
+
+    if (HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_2) == GPIO_PIN_RESET)
+    {
+        // 使能24V
+        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_2, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_3, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_4, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_5, GPIO_PIN_SET);
+        HAL_Delay(1000);
+        return 1;
+    }
+    else
+    {
+        HAL_Delay(500);
+        return 1;
+    }
+}
