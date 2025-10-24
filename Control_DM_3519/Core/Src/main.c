@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "can.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -26,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "CAN_receive.h"
 #include "bsp_can.h"
+#include "delay.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,7 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+  float vel=3.14;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,7 +59,15 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+	if (htim->Instance == TIM3) 
+	{
+		spd_control(vel);
+//		disable_motor_mode(&hcan1,0x01,SPEED_MODE);
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -68,7 +78,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+ 
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -92,19 +102,26 @@ int main(void)
   MX_CAN1_Init();
   MX_CAN2_Init();
   MX_USART6_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  float vel=6.283;
+  HAL_TIM_Base_MspInit(&htim3);
   can_filter_init();
+	HAL_CAN_MspInit(&hcan1);
   HAL_GPIO_WritePin(GPIOH, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+	HAL_Delay(10000);
   enable_motor_mode(&hcan1,0x01,SPEED_MODE);
-  HAL_Delay(200);
-  spd_control(vel);
+  HAL_Delay(500);
+  
+  HAL_TIM_Base_Start_IT(&htim3);
+//  spd_control(vel);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_11);
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

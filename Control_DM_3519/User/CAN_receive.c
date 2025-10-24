@@ -34,6 +34,7 @@ extern CAN_HandleTypeDef hcan2;
     }
 
 #define ABS(x)		((x>0)? (x): (-x)) 
+#define MAX_CIRCLE 20
 /*
 motor data,  0:chassis motor1 3508;1:chassis motor3 3508;2:chassis motor3 3508;3:chassis motor4 3508;
 4:yaw gimbal motor 6020;5:pitch gimbal motor 6020;6:trigger motor 2006;
@@ -45,8 +46,10 @@ static CAN_TxHeaderTypeDef  gimbal_tx_message;
 static uint8_t              gimbal_can_send_data[8];
 static CAN_TxHeaderTypeDef  chassis_tx_message;
 static uint8_t              chassis_can_send_data[8];
-int set_spd[6]={500},angle=1000;
+float vel_forword=6.283,vel_reverse=-6.283;
 int test_mode=control_position;
+motor_t motor[1];
+extern float vel;
 uint8_t tail[4]={0x00,0x00,0x80,0x7f};
 /**
   * @brief          hal CAN fifo call back, receive motor data
@@ -74,17 +77,18 @@ void only_pid_struct()
 									6.5f,0.01f,0.01f); 
 }
 
-float count_circle(motor_measure_t*data)
+float circle=0;
+
+float count_circle(motor_t *motor)
 {
-	static float circle=0;
-	if(data->given_current>0)	 
+	if(motor->para.vel>0)	 
 	{
-		if(data->ecd<data->last_ecd)
+		if(motor->para.pos < motor->para.pos_last)
 			circle++;		
 	}
 	else
 	{
-		if(data->ecd>data->last_ecd)
+		if(motor->para.pos > motor->para.pos_last)
 			circle--;
 	}
 	return circle;
@@ -93,13 +97,13 @@ float count_circle(motor_measure_t*data)
 void spd_control(float vel)
 {
 	  uint8_t data[4];
+	  uint8_t *vbuf;
     uint32_t send_mail_box;
 	  CAN_TxHeaderTypeDef spd_tx_message;
     spd_tx_message.StdId =0x201;
     spd_tx_message.IDE = CAN_ID_STD;
     spd_tx_message.RTR = CAN_RTR_DATA;
     spd_tx_message.DLC = 0x04;
-	  uint8_t *vbuf;
 	  vbuf=(uint8_t*)&vel;
 	  data[0] = *vbuf;
 	  data[1] = *(vbuf+1);
@@ -151,6 +155,29 @@ void disable_motor_mode(CAN_HandleTypeDef* hcan, uint16_t motor_id, uint16_t mod
 	HAL_CAN_AddTxMessage(hcan, &disable_tx_message, data, &send_mail_box);
 }
 
+float uint_to_float(int x_int, float x_min, float x_max, int bits)
+{
+	/* converts unsigned int to float, given range and number of bits */
+	float span = x_max - x_min;
+	float offset = x_min;
+	return ((float)x_int)*span/((float)((1<<bits)-1)) + offset;
+}
+
+void dm4310_fbdata(motor_t *motor, uint8_t *rx_data)
+{
+	motor->para.pos_last=motor->para.pos;
+	motor->para.id = (rx_data[0])&0x0F;
+	motor->para.state = (rx_data[0])>>4;
+	motor->para.p_int=(rx_data[1]<<8)|rx_data[2];
+	motor->para.v_int=(rx_data[3]<<4)|(rx_data[4]>>4);
+	motor->para.t_int=((rx_data[4]&0xF)<<8)|rx_data[5];
+	motor->para.pos = uint_to_float(motor->para.p_int, P_MIN, P_MAX, 16); // (-12.5,12.5)
+	motor->para.vel = uint_to_float(motor->para.v_int, V_MIN, V_MAX, 12); // (-45.0,45.0)
+	motor->para.tor = uint_to_float(motor->para.t_int, T_MIN, T_MAX, 12);  // (-18.0,18.0)
+	motor->para.Tmos = (float)(rx_data[6]);
+	motor->para.Tcoil = (float)(rx_data[7]);
+}
+
 int postion_control(float angle,pid_t* pid,pos*Pos)
 {
 	int current;
@@ -182,70 +209,25 @@ int postion_control(float angle,pid_t* pid,pos*Pos)
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
+//	__HAL_CAN_DISABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
     CAN_RxHeaderTypeDef rx_header;
     uint8_t rx_data[8];
     HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
-
-//    switch (rx_header.StdId)
-//    {
-//        case CAN_3508_M1_ID:
-//        case CAN_3508_M2_ID:
-//        case CAN_3508_M3_ID:
-//        case CAN_3508_M4_ID:
-//        case CAN_YAW_MOTOR_ID:
-//        case CAN_PIT_MOTOR_ID:
-//        case CAN_TRIGGER_MOTOR_ID:
-//        {
-//    static uint8_t i = 0;
-            //get motor id
-//            i = rx_header.StdId - CAN_3508_M1_ID;
-    get_motor_measure(&motor_chassis[0], rx_data);
-	  
-//					if(test_mode==control_position)
-//					{
-//						int get_current=postion_control(angle,&pid_pos,&POS);
-//					  pid_calc(&pid_spd[0], motor_chassis[0].speed_rpm, pid_pos.pos_out);
-//						  CAN_cmd_chassis(pid_spd[0].pos_out, 
-//									pid_spd[1].pos_out,
-//									pid_spd[2].pos_out,
-//									pid_spd[3].pos_out);
-//					  else
-//					  {
-//						  CAN_cmd_chassis(-pid_spd[0].pos_out, 
-//									-pid_spd[1].pos_out,
-//									-pid_spd[2].pos_out,
-//									-pid_spd[3].pos_out);
-//					  }
-//				  }
-//					else
-//					{
-//						for(int i=0; i<4; i++)
-//						{
-//							pid_calc(&pid_spd[i], motor_chassis[i].speed_rpm, set_spd[i]);
-//						}
-//						CAN_cmd_chassis(pid_spd[0].pos_out, 
-//									pid_spd[1].pos_out,
-//									pid_spd[2].pos_out,
-//									pid_spd[3].pos_out);
-//					}
-//						float data[4];
-//						data[0]=motor_chassis[0].speed_rpm;
-//						data[1]=set_spd[0];
-//						data[2]=POS.now;
-//					  data[3]=POS.set;
-//						HAL_UART_Transmit(&huart6,(uint8_t*)data,4*sizeof(float),100);
-//		        HAL_UART_Transmit(&huart6,tail,4*sizeof(uint8_t),100);
-//            break;
-//        }
-
-//        default:
-//        {
-//            break;
-//        }
-//    }
+	dm4310_fbdata(&motor[0],rx_data);
+	
+	count_circle(&motor[0]);
+	if(circle>MAX_CIRCLE)
+	{
+		vel=-vel;
+		circle = 0;
+	}
+	if(circle<-MAX_CIRCLE)
+	{
+		vel=-vel;
+		circle = 0;
+	}
+//	__HAL_CAN_ENABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 }
-
-
 
 /**
   * @brief          send control current of motor (0x205, 0x206, 0x207, 0x208)
@@ -406,61 +388,5 @@ const motor_measure_t *get_trigger_motor_measure_point(void)
 const motor_measure_t *get_chassis_motor_measure_point(uint8_t i)
 {
     return &motor_chassis[(i & 0x03)];
-}
-
-void control_motor_3508()
-{
-		if(test_mode==control_position)
-	{
-		postion_control(angle,&pid_pos,&POS);
-		pid_calc(&pid_spd[0], motor_chassis[0].speed_rpm, pid_pos.pos_out);
-			CAN_cmd_chassis(pid_spd[0].pos_out, 
-					pid_spd[1].pos_out,
-					pid_spd[2].pos_out,
-					pid_spd[3].pos_out);
-
-	}
-	else
-	{
-		for(int i=0; i<4; i++)
-		{
-			pid_calc(&pid_spd[i], motor_chassis[i].speed_rpm, set_spd[i]);
-		}
-		CAN_cmd_chassis(pid_spd[0].pos_out, 
-					pid_spd[1].pos_out,
-					pid_spd[2].pos_out,
-					pid_spd[3].pos_out);
-	}
-		float data[4];
-		data[0]=motor_chassis[0].speed_rpm;
-		data[1]=set_spd[0];
-		data[2]=POS.now_3508;
-		data[3]=POS.set_3508;
-		HAL_UART_Transmit(&huart6,(uint8_t*)data,4*sizeof(float),100);
-		HAL_UART_Transmit(&huart6,tail,4*sizeof(uint8_t),100);
-}
-
-void control_motor_6020()
-{
-			if(test_mode==control_position)
-	{
-		postion_control(angle,&pid_pos,&POS);
-		pid_calc(&pid_pit, motor_chassis[4].speed_rpm, pid_pos.pos_out);
-		CAN_cmd_gimbal(pid_pit.pos_out, 
-					pid_yaw.pos_out,0,0);
-	}
-	else
-	{
-		pid_calc(&pid_pit, motor_chassis[4].speed_rpm, set_spd[4]);
-		CAN_cmd_gimbal(pid_pit.pos_out, 
-					pid_yaw.pos_out,0,0);
-	}
-		float data[4];
-		data[0]=motor_chassis[4].speed_rpm;
-		data[1]=set_spd[4];
-		data[2]=POS.now_6020;
-		data[3]=POS.set_6020;
-		HAL_UART_Transmit(&huart6,(uint8_t*)data,4*sizeof(float),100);
-		HAL_UART_Transmit(&huart6,tail,4*sizeof(uint8_t),100);
 }
 

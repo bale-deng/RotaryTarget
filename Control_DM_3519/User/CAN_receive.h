@@ -30,6 +30,17 @@
 #define POS_MODE			0x100
 #define SPEED_MODE		0x200
 
+#define P_MIN -12.5f
+#define P_MAX 12.5f
+#define V_MIN -30.0f
+#define V_MAX 30.0f
+#define KP_MIN 0.0f
+#define KP_MAX 500.0f
+#define KD_MIN 0.0f
+#define KD_MAX 5.0f
+#define T_MIN -10.0f
+#define T_MAX 10.0f
+
 /* CAN send and receive ID */
 typedef enum
 {
@@ -56,6 +67,32 @@ typedef struct
     int16_t last_ecd;
 } motor_measure_t;
 
+typedef struct 
+{
+	int id;
+	int state;
+	int p_int;
+	int v_int;
+	int t_int;
+	int kp_int;
+	int kd_int;
+	float pos;
+	float vel;
+	float tor;
+	float Kp;
+	float Kd;
+	float Tmos;
+	float Tcoil;
+	float pos_last;
+}motor_fbpara_t;
+
+typedef struct
+{
+	int16_t id;
+	uint8_t start_flag;
+	motor_fbpara_t para;
+}motor_t;
+
 enum test_mode
 {
 	control_speed,
@@ -63,12 +100,12 @@ enum test_mode
 };
 void only_pid_struct(void);
 int postion_control(float circle,pid_t* pid,pos*Pos);
-void control_motor_3508(void);
-void control_motor_6020(void);
-float count_circle(motor_measure_t*data);
+float count_circle(motor_t *motor);
 void spd_control(float vel);
 void enable_motor_mode(CAN_HandleTypeDef* hcan, uint16_t motor_id, uint16_t mode_id);
 void disable_motor_mode(CAN_HandleTypeDef* hcan, uint16_t motor_id, uint16_t mode_id);
+float uint_to_float(int x_int, float x_min, float x_max, int bits);
+void dm4310_fbdata(motor_t *motor, uint8_t *rx_data);
 /**
   * @brief          send control current of motor (0x205, 0x206, 0x207, 0x208)
   * @param[in]      yaw: (0x205) 6020 motor control current, range [-30000,30000] 
