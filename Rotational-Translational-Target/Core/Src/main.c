@@ -19,7 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "can.h"
-#include "wwdg.h"
+#include "iwdg.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -39,6 +39,8 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+
+
 
 /* USER CODE END PM */
 
@@ -101,6 +103,15 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+	
+	// 独立看门狗使用实例：
+// HAL_IWDG_Init(IWDG_HandleTypeDef *hiwdg); -> 第一步调用初始化
+// HAL_IWDG_Refresh(IWDG_HandleTypeDef *hiwdg); -> 要喂狗的时候调用喂狗函数
+
+// 窗口看门狗调用实例：
+// HAL_WWDG_Init(WWDG_HandleTypeDef *hwwdg); -> 第一步调用初始化
+// HAL_WWDG_Refresh(WWDG_HandleTypeDef *hwwdg) -> 第二步喂狗
+// HAL_WWDG_IRQHandler(WWDG_HandleTypeDef *hwwdg); -> 第三步注意这个回调函数
 
   /* USER CODE END SysInit */
 
@@ -108,7 +119,7 @@ int main(void)
   MX_GPIO_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
-  MX_WWDG_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
   MotorPowerEnable();
   /* USER CODE END 2 */
@@ -141,8 +152,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 6;
