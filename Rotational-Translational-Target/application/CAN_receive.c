@@ -36,7 +36,7 @@ extern CAN_HandleTypeDef hcan2;
 #define ABS(x) ((x > 0) ? (x) : (-x))
 #define MAX_CIRCLE 12
 
-static float circle = 0;
+__IO float circle = 0;
 
 /*
 motor data,  0:chassis motor1 3508;1:chassis motor3 3508;2:chassis motor3 3508;3:chassis motor4 3508;
@@ -182,18 +182,23 @@ void only_pid_struct()
 //   }
 // }
 
-float count_circle(motor_t *motor)
+static float count_circle(motor_t *motor)
 {
   if (motor->para.vel > 0)
   {
     if (motor->para.pos < motor->para.pos_last)
-      circle++;
+		{
+			circle++;
+		}
   }
   else
   {
     if (motor->para.pos > motor->para.pos_last)
-      circle--;
+		{
+			circle--;
+		}
   }
+	
   return circle;
 }
 
@@ -269,7 +274,7 @@ void enable_motor_mode(CAN_HandleTypeDef *hcan, uint16_t motor_id, uint16_t mode
   data[6] = 0xFF;
   data[7] = 0xFC;
   HAL_CAN_AddTxMessage(hcan, &Enable_tx_message, data, &send_mail_box);
-	HAL_Delay(20);
+  HAL_Delay(20);
 }
 
 /// @brief 失能DM电机
@@ -303,7 +308,7 @@ uint8_t CAN_RX_FLAG = 0;
 /// @retval 无
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-  // __HAL_CAN_DISABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+  __HAL_CAN_DISABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
   CAN_RX_FLAG = 1;
   CAN_RxHeaderTypeDef rx_header;
   uint8_t rx_data[8];
@@ -311,6 +316,14 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
   dm4310_fbdata(&motor[0], rx_data);
 
   count_circle(&motor[0]);
+
+  // Add Speed Valuee or Reduce Speed Value
+  // When Circle is equaling to middle value(one half of MAX_CIRCLE), the Speed Value is the maximum value
+  // Speed_Lower
+  // Speed_Upper
+  // Speed_Max
+  // Speed_default
+
   if (circle > MAX_CIRCLE)
   {
     target_value = -target_value;
@@ -321,7 +334,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     target_value = -target_value;
     circle = 0;
   }
-  // __HAL_CAN_ENABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+  __HAL_CAN_ENABLE_IT(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 }
 
 /**
