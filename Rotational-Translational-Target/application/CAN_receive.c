@@ -34,7 +34,7 @@ extern CAN_HandleTypeDef hcan2;
   }
 
 #define ABS(x) ((x > 0) ? (x) : (-x))
-#define MAX_CIRCLE 12
+#define MAX_CIRCLE 36
 
 __IO float circle = 0;
 

@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file    usart.c
-  * @brief   This file provides code for the configuration
-  *          of the USART instances.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    usart.c
+ * @brief   This file provides code for the configuration
+ *          of the USART instances.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
@@ -26,7 +26,7 @@
 #include <string.h>
 uint8_t Flag = 0x00;
 uint8_t message[128];
-static char RxFlag[] = "RxOK\r\n"; 
+static char RxFlag[] = "RxOK\r\n";
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim5;
@@ -64,18 +64,17 @@ void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
-
 }
 
-void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
+void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(uartHandle->Instance==USART1)
+  if (uartHandle->Instance == USART1)
   {
-  /* USER CODE BEGIN USART1_MspInit 0 */
+    /* USER CODE BEGIN USART1_MspInit 0 */
 
-  /* USER CODE END USART1_MspInit 0 */
+    /* USER CODE END USART1_MspInit 0 */
     /* USART1 clock enable */
     __HAL_RCC_USART1_CLK_ENABLE();
 
@@ -109,7 +108,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle,hdmarx,hdma_usart1_rx);
+    __HAL_LINKDMA(uartHandle, hdmarx, hdma_usart1_rx);
 
     /* USART1_TX Init */
     hdma_usart1_tx.Instance = DMA1_Channel4;
@@ -125,25 +124,25 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle,hdmatx,hdma_usart1_tx);
+    __HAL_LINKDMA(uartHandle, hdmatx, hdma_usart1_tx);
 
     /* USART1 interrupt Init */
     HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
-  /* USER CODE BEGIN USART1_MspInit 1 */
+    /* USER CODE BEGIN USART1_MspInit 1 */
 
-  /* USER CODE END USART1_MspInit 1 */
+    /* USER CODE END USART1_MspInit 1 */
   }
 }
 
-void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
+void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
 {
 
-  if(uartHandle->Instance==USART1)
+  if (uartHandle->Instance == USART1)
   {
-  /* USER CODE BEGIN USART1_MspDeInit 0 */
+    /* USER CODE BEGIN USART1_MspDeInit 0 */
 
-  /* USER CODE END USART1_MspDeInit 0 */
+    /* USER CODE END USART1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_USART1_CLK_DISABLE();
 
@@ -151,7 +150,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PA9     ------> USART1_TX
     PA10     ------> USART1_RX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9 | GPIO_PIN_10);
 
     /* USART1 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);
@@ -159,98 +158,97 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
     /* USART1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USART1_IRQn);
-  /* USER CODE BEGIN USART1_MspDeInit 1 */
+    /* USER CODE BEGIN USART1_MspDeInit 1 */
 
-  /* USER CODE END USART1_MspDeInit 1 */
+    /* USER CODE END USART1_MspDeInit 1 */
   }
 }
 
 /* USER CODE BEGIN 1 */
-//void USART1_IRQHandler(void)  
+// void USART1_IRQHandler(void)
 //{
-//    HAL_UART_IRQHandler(&huart1);
-//}
+//     HAL_UART_IRQHandler(&huart1);
+// }
 
 int16_t SpeedTarget = 0x0000;
 static uint8_t FlagBit = 0x00;
+/// @brief 解算数据
 static void ParsData(void)
 {
-	
-	{
-		float tem = 000.0f;
-		if (FlagBit == 2)
-		{
-			SpeedTarget = (message[1] - 0x30) * 10 + (message[3] - 0x30) * 1; 
-			SpeedTarget = SpeedTarget / 1000.0f * 2000;
-		}
-		else if (FlagBit == 3)
-		{
-			SpeedTarget = (message[1] - 0x30) * 100 + (message[2] - 0x30) * 10 + (message[4] - 0x30) * 1; 
-			SpeedTarget = SpeedTarget / 1000.0f * 2000;
-		}
-		else 
-		{
-			SpeedTarget = 2000;
-		}
-		SpeedTarget = SpeedTarget > 2000 ? 2000 : SpeedTarget;
-		SpeedTarget = SpeedTarget < 800 ? 800 : SpeedTarget;
-		
-	}	
+
+  {
+    float tem = 000.0f;
+    if (FlagBit == 2)
+    {
+      SpeedTarget = (message[1] - 0x30) * 10 + (message[3] - 0x30) * 1;
+      SpeedTarget = SpeedTarget / 1000.00f * 2000;
+    }
+    else if (FlagBit == 3)
+    {
+      SpeedTarget = (message[1] - 0x30) * 100 + (message[2] - 0x30) * 10 + (message[4] - 0x30) * 1;
+      SpeedTarget = SpeedTarget / 1000.00f * 2000;
+    }
+    else
+    {
+      SpeedTarget = 2000;
+    }
+    SpeedTarget = SpeedTarget > 2000 ? 2000 : SpeedTarget;
+    SpeedTarget = SpeedTarget < 800 ? 800 : SpeedTarget;
+  }
 }
 
-int16_t SetSepeedTarget(void)
-{
-	return SpeedTarget;
-}
-
+/// @brief 设置PWM占空比
 void Set_PWM()
 {
-	if (Flag)	  
-	{        	
-	uint32_t tempdata = SetSepeedTarget();
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SetSepeedTarget());
-	Flag = 0x00;
-	}	
+  if (Flag)
+  {
+    uint32_t tempdata = SpeedTarget;
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SpeedTarget);
+    Flag = 0x00;
+  }
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    if (huart->Instance == USART1)
+  if (huart->Instance == USART1)
+  {
+    if (message[0] == 0x3A)
     {
-		if (message[0] == 0x3A)
-		{
-			if(message[1] == 's')
-			{
-				SpeedTarget = 0;
-				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
-			}
-			else if(message[1] == 'f')
-			{
-				SpeedTarget = 2000;
-				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
-			}
-			else if(message[1] == 'z')
-			{
-				SpeedTarget = (message[2] - 0x30) * 1; 
-				SpeedTarget = SpeedTarget / 1000.0f * 2000;
-				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
-			}
-			else if ((message[2] == 0x2E) || (message[3] == 0x2E) || (message[4] == 0x2E))
-			{
-				if (message[2] == 0x2E){FlagBit = 2;}
-				else if (message[3] == 0x2E){FlagBit = 3;}
-				else {FlagBit = 4;}
-				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
-				
-				ParsData();
-			}
-		
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, message, Size);
-        __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
-		memset(message, 0xFF, Size);
-			Flag = 0x01;
-		}
-		Set_PWM();
+      if (message[1] == 's')
+      {
+        SpeedTarget = 0;
+        HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+      }
+      else if (message[1] == 'f')
+      {
+        SpeedTarget = 2000;
+        HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+      }
+      else if ((message[2] == 0x2E) || (message[3] == 0x2E) || (message[4] == 0x2E))
+      {
+        if (message[2] == 0x2E)
+        {
+          FlagBit = 2;
+        }
+        else if (message[3] == 0x2E)
+        {
+          FlagBit = 3;
+        }
+        else
+        {
+          FlagBit = 4;
+        }
+        HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+
+        ParsData();
+      }
+
+      HAL_UARTEx_ReceiveToIdle_DMA(&huart1, message, Size);
+      __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+      memset(message, 0xFF, Size);
+      Flag = 0x01;
     }
+    Set_PWM();
+  }
 }
 /* USER CODE END 1 */

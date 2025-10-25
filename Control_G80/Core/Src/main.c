@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -50,7 +50,7 @@ extern uint8_t Flag;
 extern uint8_t message[128];
 extern int16_t SpeedTarget;
 uint32_t count = 0;
-uint32_t PWM_duty[7] = {100, 100, 100, 50, 50, 50, 50};
+uint16_t test2 = 930;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,30 +64,30 @@ void SystemClock_Config(void);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-	if (htim->Instance == TIM3) 
-	{
-		if(SpeedTarget != 0)
-		{
-			count++;
-			if(count == 3000)
-			{
-				SpeedTarget = 0;
-				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SpeedTarget);
-				count = 0;
-			}
-		}
-		if(SpeedTarget == 0)
-		{
-			count = 0;
-		}
-	}
+  if (htim->Instance == TIM3)
+  {
+    if (SpeedTarget != 0)
+    {
+      count++;
+      if (count == 3000)
+      {
+        SpeedTarget = 0;
+        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SpeedTarget);
+        count = 0;
+      }
+    }
+    if (SpeedTarget == 0)
+    {
+      count = 0;
+    }
+  }
 }
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -118,33 +118,28 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);  //receive interrupt
-  __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);  //idle interrupt
-  
-  //����PWMͨ��
+  __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE); // receive interrupt
+  __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE); // idle interrupt
+
+  // 开启PWM
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
-  
-  // ʹ��Ex���������ղ���������
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, message, sizeof(message));
-  // �ر�DMA��������жϣ�HAL��Ĭ�Ͽ�����������ֻ��Ҫ��������жϣ�
   __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
-  
+
   HAL_TIM_Base_MspInit(&htim3);
   HAL_TIM_Base_Start_IT(&htim3);
-  
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t test = 800;
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, test);
   while (1)
   {
-//	  if (Flag)	  
-//	  {        	
-//		uint32_t tempdata = SetSepeedTarget();
-//		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SetSepeedTarget());
-//		Flag = 0x00;
-//	  }	
+//		HAL_Delay(20);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, test2);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -153,17 +148,17 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+   * in the RCC_OscInitTypeDef structure.
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
@@ -177,9 +172,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -196,9 +190,9 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -211,12 +205,12 @@ void Error_Handler(void)
 }
 #ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

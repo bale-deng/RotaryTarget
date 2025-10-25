@@ -23,7 +23,7 @@
 /* USER CODE BEGIN 0 */
 #include "CAN_receive.h"
 
-float target_value = 5.0f;
+float target_value = 7.0f;
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim3;
