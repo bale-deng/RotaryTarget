@@ -238,7 +238,7 @@ void Receive(uint8_t *Buf)
 {
 	uint8_t Status;
 	Status = R_Reg(R_REGISTER + STATUS);
-	// 对寄存器进行检查是否接收完了数据
+	// 对寄存器进行检查
 	if (Status & RX_OK)
 	{
 		R_Buf(R_RX_PAYLOAD, Buf, 32);
