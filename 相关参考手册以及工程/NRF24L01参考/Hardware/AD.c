@@ -2,18 +2,18 @@
 
 void AD_Init(void)
 {
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);//ÅäÖÃÊ±ÖÓ
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);//é…ç½®æ—¶é’Ÿ
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 	
-	RCC_ADCCLKConfig(RCC_PCLK2_Div6);//ÅäÖÃADCÔ¤·ÖÆµ£¬ÍÆ¶¯ADC×ª»»
+	RCC_ADCCLKConfig(RCC_PCLK2_Div6);//é…ç½®ADCé¢„åˆ†é¢‘ï¼Œæ¨åŠ¨ADCè½¬æ¢
 	
-	GPIO_InitTypeDef GPIO_InitStrucure;//ÅäÖÃGPIOA0ÎªÄ£ÄâÊäÈëÄ£Ê½
+	GPIO_InitTypeDef GPIO_InitStrucure;//é…ç½®GPIOA0ä¸ºæ¨¡æ‹Ÿè¾“å…¥æ¨¡å¼
 	GPIO_InitStrucure.GPIO_Mode = GPIO_Mode_AIN;
 	GPIO_InitStrucure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
 	GPIO_InitStrucure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &GPIO_InitStrucure);
 		
-	ADC_InitTypeDef ADC_InitStructure;//ÅäÖÃADCÄ£¿é
+	ADC_InitTypeDef ADC_InitStructure;//é…ç½®ADCæ¨¡å—
 	ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
 	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
 	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
@@ -22,18 +22,18 @@ void AD_Init(void)
 	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
 	ADC_Init(ADC1, &ADC_InitStructure);
 	
-	ADC_Cmd(ADC1, ENABLE);//¿ªÆôµçÔ´
+	ADC_Cmd(ADC1, ENABLE);//å¼€å¯ç”µæº
 	
-	ADC_ResetCalibration(ADC1);//Ğ£×¼ADC
+	ADC_ResetCalibration(ADC1);//æ ¡å‡†ADC
 	while(ADC_GetResetCalibrationStatus(ADC1) == SET);
 	ADC_StartCalibration(ADC1);
 	while(ADC_GetCalibrationStatus(ADC1) == SET);
 }
 
-uint16_t AD_GetValue(uint8_t ADC_Channel)//»ñÈ¡AD×ª»»ÖµµÄº¯Êı
+uint16_t AD_GetValue(uint8_t ADC_Channel)//è·å–ADè½¬æ¢å€¼çš„å‡½æ•°
 {
-	ADC_RegularChannelConfig(ADC1, ADC_Channel, 1, ADC_SampleTime_239Cycles5);//ÅäÖÃÍ¨µÀ
-	ADC_SoftwareStartConvCmd(ADC1, ENABLE);//ÈôÅäÖÃÎªÁ¬Ğø×ª»»Ä£Ê½£¬ÕâÒ»ĞĞ·Åµ½³õÊ¼»¯º¯Êı×îºó
-	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);//ÈôÅäÖÃÎªÁ¬Ğø×ª»»Ä£Ê½£¬ÕâÒ»ĞĞÉ¾µô
+	ADC_RegularChannelConfig(ADC1, ADC_Channel, 1, ADC_SampleTime_239Cycles5);//é…ç½®é€šé“
+	ADC_SoftwareStartConvCmd(ADC1, ENABLE);//è‹¥é…ç½®ä¸ºè¿ç»­è½¬æ¢æ¨¡å¼ï¼Œè¿™ä¸€è¡Œæ”¾åˆ°åˆå§‹åŒ–å‡½æ•°æœ€å
+	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);//è‹¥é…ç½®ä¸ºè¿ç»­è½¬æ¢æ¨¡å¼ï¼Œè¿™ä¸€è¡Œåˆ æ‰
 	return ADC_GetConversionValue(ADC1);
 }
