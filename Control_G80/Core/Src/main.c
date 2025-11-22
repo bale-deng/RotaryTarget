@@ -74,18 +74,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			count_2++;
 			if(count_1 == 20)
 			{
-				HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_4);
+				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_2);
 			}
 			else if(count_1 == 600)
 			{
-				HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
+				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 				count_1 = 0;
 			}
 			
 			if(count_2 == 18000)
 			{
 				SpeedTarget = 0;
-				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SpeedTarget);
+				__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, SpeedTarget);
 				count_2 = 0;
 			}
 		}
@@ -103,18 +103,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 //			count_2++;
 //			if(count_1 == 100)
 //			{
-//				HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_4);
+//				HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_2);
 //			}
 //			else if(count_1 == 200)
 //			{
-//				HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
+//				HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 //				count_1 = 0;
 //			}
 //			
 //			if(count_2 == 3000)
 //			{
 //				SpeedTarget = 0;
-//				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SpeedTarget);
+//				__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, SpeedTarget);
 //				count_2 = 0;
 //			}
 //		}
@@ -160,13 +160,15 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);  //receive interrupt
   __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);  //idle interrupt
   
   //����PWMͨ��
-  HAL_TIM_Base_Start(&htim2);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
+  HAL_TIM_Base_Start(&htim4);
+	HAL_TIM_Base_MspInit(&htim4);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   
   // ʹ��Ex���������ղ���������
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, message, sizeof(message));
@@ -176,7 +178,7 @@ int main(void)
   HAL_TIM_Base_MspInit(&htim3);
   HAL_TIM_Base_Start_IT(&htim3);
   
-//  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, test);
+//  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, test);
   
   /* USER CODE END 2 */
 
@@ -186,7 +188,7 @@ int main(void)
   {
 //	  if (Flag)	  
 //	  {
-//		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SetSepeedTarget());
+//		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, SetSepeedTarget());
 //		Flag = 0x00;
 //	  }	
     /* USER CODE END WHILE */

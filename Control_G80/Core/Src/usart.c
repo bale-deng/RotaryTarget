@@ -208,7 +208,7 @@ void Set_PWM()
 	if (Flag)	  
 	{        	
 	uint32_t tempdata = SetSepeedTarget();
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, SetSepeedTarget());
+	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, SetSepeedTarget());
 	Flag = 0x00;
 	}	
 }
@@ -217,40 +217,46 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == USART1)
     {
-		if (message[0] == 0x3A)
-		{
-			if(message[1] == 's')
+			if (message[0] == 0x3A)
 			{
-				SpeedTarget = 0;
-				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+				if(message[1] == 's')
+				{
+					SpeedTarget = 0;
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+				}
+				else if(message[1] == 'f')
+				{
+					SpeedTarget = 2000;
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+				}
+	//			else if(message[1] == 'z')
+	//			{
+	//				SpeedTarget = (message[2] - 0x30) * 1; 
+	//				SpeedTarget = SpeedTarget / 1000.0f * 2000;
+	//				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+	//			}
+				else if ((message[2] == 0x2E) || (message[3] == 0x2E) || (message[4] == 0x2E))
+				{
+					if (message[2] == 0x2E){FlagBit = 2;}
+					else if (message[3] == 0x2E){FlagBit = 3;}
+					else {FlagBit = 4;}
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+					
+					ParsData();
+				}
+			
+					HAL_UARTEx_ReceiveToIdle_DMA(&huart1, message, Size);
+					__HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+			memset(message, 0xFF, Size);
+				Flag = 0x01;
 			}
-			else if(message[1] == 'f')
+			
+//			Set_PWM();
+			if (Flag)	  
 			{
-				SpeedTarget = 2000;
-				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
+				__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, SpeedTarget);
+				Flag = 0x00;
 			}
-//			else if(message[1] == 'z')
-//			{
-//				SpeedTarget = (message[2] - 0x30) * 1; 
-//				SpeedTarget = SpeedTarget / 1000.0f * 2000;
-//				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
-//			}
-			else if ((message[2] == 0x2E) || (message[3] == 0x2E) || (message[4] == 0x2E))
-			{
-				if (message[2] == 0x2E){FlagBit = 2;}
-				else if (message[3] == 0x2E){FlagBit = 3;}
-				else {FlagBit = 4;}
-				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)RxFlag, sizeof(RxFlag));
-				
-				ParsData();
-			}
-		
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, message, Size);
-        __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
-		memset(message, 0xFF, Size);
-			Flag = 0x01;
-		}
-		Set_PWM();
     }
 }
 /* USER CODE END 1 */

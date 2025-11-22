@@ -1,8 +1,4 @@
 *** Using Compiler 'V6.24', folder: 'D:\KEIL\Core\ARM\ARMCLANG\Bin'
 Build target 'Control_G80'
-compiling main.c...
-linking...
-Program Size: Code=12432 RO-data=312 RW-data=20 ZI-data=2132  
-FromELF: creating hex file...
 "Control_G80\Control_G80.axf" - 0 Error(s), 0 Warning(s).
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:00

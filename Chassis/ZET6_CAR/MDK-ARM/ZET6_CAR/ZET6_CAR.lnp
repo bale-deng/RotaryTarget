@@ -1,0 +1,25 @@
+--cpu Cortex-M3
+"zet6_car\startup_stm32f103xe.o"
+"zet6_car\main.o"
+"zet6_car\gpio.o"
+"zet6_car\spi.o"
+"zet6_car\stm32f1xx_it.o"
+"zet6_car\stm32f1xx_hal_msp.o"
+"zet6_car\nrf24l01.o"
+"zet6_car\stm32f1xx_hal_gpio_ex.o"
+"zet6_car\stm32f1xx_hal_spi.o"
+"zet6_car\stm32f1xx_hal.o"
+"zet6_car\stm32f1xx_hal_rcc.o"
+"zet6_car\stm32f1xx_hal_rcc_ex.o"
+"zet6_car\stm32f1xx_hal_gpio.o"
+"zet6_car\stm32f1xx_hal_dma.o"
+"zet6_car\stm32f1xx_hal_cortex.o"
+"zet6_car\stm32f1xx_hal_pwr.o"
+"zet6_car\stm32f1xx_hal_flash.o"
+"zet6_car\stm32f1xx_hal_flash_ex.o"
+"zet6_car\stm32f1xx_hal_exti.o"
+"zet6_car\system_stm32f1xx.o"
+--strict --scatter "ZET6_CAR\ZET6_CAR.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "ZET6_CAR.map" -o ZET6_CAR\ZET6_CAR.axf
